@@ -67,7 +67,8 @@ jobs:
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
 
-  # ==========================================
+
+# ==========================================
   # 3. DEPLOY (на GitHub Pages + Smoke Test образа)
   # ==========================================
   deploy:
@@ -80,7 +81,15 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # 3.1. Smoke-тест (качаем образ из реестра и запускаем контейнер для проверки)
+      # ВОТ ЭТОТ ШАГ МЫ ДОБАВИЛИ (авторизуем runner, чтобы он мог скачать образ):
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # 3.1. Smoke-тест (теперь образ успешно скачается)
       - name: Test Docker Run from GHCR
         run: |
           echo "Скачиваем наш свежий образ..."
@@ -89,7 +98,7 @@ jobs:
           docker run -d -p 8080:80 --name test-app "$IMAGE"
           sleep 2
           curl -f http://localhost:8080 || (echo "Контейнер упал!" && exit 1)
-          echo "Контейнер отдаёт 200 OK!"
+          echo "Контейнер успешно запущен и отдаёт 200 OK!"
           docker stop test-app
 
       # 3.2. Деплой сайта в GitHub Pages
